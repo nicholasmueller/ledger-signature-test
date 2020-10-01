@@ -50,7 +50,6 @@ async function signatureTest () {
   const domainSeperatorHash = getDomainSeperatorHash(typedData);
   console.log('messageHash: ', bufferToHex(messageHash));
   console.log('domainSeperatorHash: ', bufferToHex(domainSeperatorHash));
-  console.log('\n');
 
   // full hash we want to ecsign
   const signHashResult = OmgUtil.transaction.getToSignHash(typedData);
