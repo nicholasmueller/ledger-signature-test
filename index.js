@@ -2,7 +2,9 @@ require('dotenv').config();
 const Transport = require('@ledgerhq/hw-transport-node-hid').default;
 const Eth = require('ledger-eip-support-poc/packages/hw-app-eth').default;
 
-const { bufferToHex } = require('ethereumjs-util');
+const { bufferToHex, ecsign, keccak256 } = require('ethereumjs-util');
+const { concatSig } = require('eth-sig-util');
+const { Buffer } = require('buffer');
 
 const { ChildChain, RootChain, OmgUtil } = require('@omisego/omg-js');
 const { hashTypedDataMessage, getDomainSeperatorHash } = require('./omgService');
@@ -51,11 +53,20 @@ async function signatureTest () {
   console.log('messageHash: ', bufferToHex(messageHash));
   console.log('domainSeperatorHash: ', bufferToHex(domainSeperatorHash));
 
-  // full hash we want to ecsign
+  // full hash we want to ecsign in the device
   const signHashResult = OmgUtil.transaction.getToSignHash(typedData);
-  console.log('expected hash to ecsign: ', bufferToHex(signHashResult));
-  console.log('\n');
+  console.log('expected hash to ecsign (omg-js): ', bufferToHex(signHashResult));
 
+  const expectedHash = keccak256(
+    Buffer.concat([
+      Buffer.from('1901', 'hex'),
+      domainSeperatorHash,
+      messageHash
+    ])
+  );
+  console.log('expected hash to ecsign (local): ', bufferToHex(expectedHash));
+
+  console.log('\n');
   console.log('please check the ledger now to sign the typed data...');
   console.log('\n');
 
@@ -78,11 +89,19 @@ async function signatureTest () {
   console.log('s: ', s);
   console.log('\n');
 
-  const signature = `0x${r}${s}${v}`;
-  console.log('ledger signature: ', signature);
+  const ledgerSignature = `0x${r}${s}${v}`;
+  console.log('ledger signature: ', ledgerSignature);
 
   const expectedSignature = OmgUtil.sign(signHashResult, [ process.env.ACCOUNT_PK ]);
-  console.log('expected signature: ', expectedSignature[0]);
+  console.log('expected signature (omg-js): ', expectedSignature[0]);
+
+  const nodeEcSign = ecsign(
+    signHashResult,
+    Buffer.from(process.env.ACCOUNT_PK.replace('0x', ''), 'hex')
+  )
+  const nodeSignature = concatSig(nodeEcSign.v, nodeEcSign.r, nodeEcSign.s);
+  console.log('expected signature (node): ', nodeSignature);
+
   console.log('\n');
 }
 
