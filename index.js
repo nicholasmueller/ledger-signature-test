@@ -78,7 +78,7 @@ async function signatureTest () {
     bufferToHex(messageHash)
   );
 
-  let v = (_v - 27).toString(16);
+  let v = _v.toString(16);
   if (v.length < 2) {
     v = "0" + v;
   }
